@@ -1,0 +1,82 @@
+# Release Process (Team Falcon)
+
+## Schedule
+- Production releases go out every Thursday at 14:00 IST.
+- No releases on the last Friday of a quarter (code freeze).
+- Hotfixes can ship any weekday before 18:00 IST.
+
+## Branch naming
+- Release branches are named `release/YYYY.MM.N`, for example `release/2026.11.2`.
+- Hotfix branches are named `hotfix/<ticket-id>`, for example `hotfix/FAL-1423`.
+
+## Approvals
+- Every release needs approval from the Release Captain for that week.
+- The Release Captain rotates weekly; the current list lives in the #falcon-release Slack channel.
+- A release needs 2 approvals on the release PR: the Release Captain and one QA engineer.
+
+## Steps
+1. Cut the release branch from `main` on Wednesday by 17:00 IST.
+2. Run the full regression suite (`nightly-regression` job); it must be green.
+3. Deploy to staging and run smoke tests for at least 2 hours.
+4. Get approvals, then deploy to production on Thursday at 14:00 IST.
+5. Post release notes in #falcon-release within 1 hour of deploying.
+
+## Rollback
+- If error rate rises above 2% within 30 minutes of a release, roll back immediately.
+- Rollback command: `falconctl rollback --to previous`.
+
+
+# On-call Guide (Team Falcon)
+
+## Rotation
+- Each on-call shift lasts 7 days, starting Monday at 10:00 IST.
+- Two people are on call at a time: a primary and a secondary.
+- The schedule is managed in PagerDuty under the service name `falcon-platform`.
+
+## Response times
+- Sev1 (service down): acknowledge within 5 minutes, start working on it within 15 minutes.
+- Sev2 (major feature broken): acknowledge within 30 minutes.
+- Sev3 (minor issue): handle during working hours, within 2 working days.
+
+## Escalation
+1. Primary on-call gets paged first.
+2. If the primary does not acknowledge in 10 minutes, the secondary is paged.
+3. If neither acknowledges in 20 minutes, the Engineering Manager, Priya Nair, is paged.
+4. For Sev1 incidents lasting more than 1 hour, open an incident channel named `#inc-YYYYMMDD-<short-name>`.
+
+## Communication
+- Post status updates in #falcon-oncall every 30 minutes during a Sev1.
+- Write a postmortem for every Sev1 within 3 working days.
+
+## Handover
+- Handover meeting is every Monday at 09:30 IST.
+- The outgoing primary writes a handover note listing open incidents and known risks.
+
+
+# Test Guidelines (Team Falcon)
+
+## Coverage
+- Minimum line coverage for every service is 82%.
+- New code in a PR must have at least 90% coverage.
+- PRs that drop overall coverage by more than 0.5% are blocked by CI.
+
+## Test types
+- Unit tests live in `tests/unit/` and must run in under 2 minutes in total.
+- Integration tests live in `tests/integration/` and run only on the `main` branch and release branches.
+- End-to-end tests run in the `nightly-regression` job at 02:00 IST.
+
+## Naming rules
+- Test files: `test_<module>.py`.
+- Test functions: `test_<what>_<expected_result>`, for example `test_login_with_bad_password_returns_401`.
+- CI job names: `<service>-<test-type>`, for example `payments-unit` or `payments-integration`.
+
+## Flaky tests
+- A test that fails and then passes on retry without code changes is marked flaky.
+- Flaky tests must be tagged `@pytest.mark.flaky` and get a ticket in the FLAKY Jira project.
+- A flaky test must be fixed or deleted within 10 working days.
+- If a service has more than 5 open flaky tickets, it cannot be released until they are below 5.
+
+## Test data
+- Never use production data in tests.
+- Shared fixtures live in `tests/conftest.py`.
+
